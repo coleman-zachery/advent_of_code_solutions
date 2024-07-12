@@ -1,1 +1,1 @@
-my python solutions to advent of code
+jupyter notebook solutions to advent of code
