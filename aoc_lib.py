@@ -6,6 +6,8 @@ alphab, ALPHAB = 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 digits, digits_as_words = '0123456789', ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 remap_cards = {'2':'2', '3':'3', '4':'4', '5':'5', '6':'6', '7':'7', '8':'8', '9':'9', 'T':'B', 'J':'C', 'Q':'D', 'K':'E', 'A':'F', 'X':'0'}
 
+def int1(x): return int(x) + 1
+
 def rotate_grid(grid, direction="right"):
     if direction == "right":
         return [list(row)[::-1] for row in zip(*grid)]
@@ -32,7 +34,7 @@ def lcm_list(array): return array[0] if len(array) == 1 else lcm_list([lcm(array
 def average(array, include_zeros=True): return sum([num for num in array if num != 0 or include_zeros]) / max(len([num for num in array if num != 0 or include_zeros]), 1)
 def distance(a, b, direct=False): return sum([abs(a[i] - b[i]) ** (1 + direct) for i in range(len(a))]) ** (1 / (1 + direct))
 def none(array): return not any(array)
-def cardinal(array, num): return [items for items in zip(*[list(array[i:len(array)-num+i+1]) for i in range(num)])]
+def cardinal(array, num): return [tuple(array[i:i+num]) for i in range(len(array) - num + 1)]
 
 def product(array, include_zeros=False):
     if 0 in array and include_zeros: return 0
@@ -47,14 +49,14 @@ def extremes(array, mode='max'):
 def items_meet_constraints(items, rules): return all(rule not in items or items[rule] <= rules[rule] for rule in rules)
 def items_in_matrix(items, matrix, find=True): return [(i, j) for i, row in enumerate(matrix) for j, item in enumerate(row) if (item in items) == find]
 def items_in_rows(items, matrix, find=True): return [i for i, row in enumerate(matrix) if (any(item in row for item in items) ^ (not find))]
-def items_in_cols(items, matrix, find=True): return [i for i, col in enumerate(rotate(matrix)) if (any(item in col for item in items) ^ (not find))]
+def items_in_cols(items, matrix, find=True): return [i for i, col in enumerate(rotate_grid(matrix)) if (any(item in col for item in items) ^ (not find))]
 def items_in_row(items, row, find=True): return [(i, item) for i, item in enumerate(row) if (item in items) ^ (not find)]
 
 def count_chars(string): return {char: string.count(char) for char in string}
 def count_and_sort_chars(string): return sorted(sorted(list({char: string.count(char) for char in string}.items()), key=lambda x: x[0]), key=lambda x: x[1], reverse=True)
 def reverse(string): return string[::-1]
 def is_palindrome(string): return string == reverse(string)
-def list_chars(string): return [list(line) for line in data.split('\n')]
+def list_chars(string): return [list(line) for line in string.split('\n')]
 
 def replace_all_items_in_string(items, string):
     for item1, item2 in items: string = string.replace(item1, item2)
@@ -74,31 +76,48 @@ def quadratic(a, b, c): return (- b + (b ** 2 - 4 * a * c) ** .5) / (2 * a), (- 
 def num_in_range(num, pair): return min(pair) <= num < max(pair)
 def natural_power(num): return 0 if num < 1 else 1 << (num - 1)
 
-def range_intersection(range1, range2): # uses 2 pairs of coordinates (even pair not inclusive)
-    (x1, x2), (x3, x4) = range1, range2 # get x's
-    if x1 == x2 or x3 == x4: return [[], [range1] * (x1 < x2), [range2] * (x3 < x4)] # check for zero-length
-    if range1 == range2: return [[range1], [], []] # check for same range
-    left_pair, intersection, right_pair = cardinal((min(x1, x3), max(x1, x3), min(x2, x4), max(x2, x4)), 2) # get pairs
-    if intersection[0] >= intersection[1]: return [[], [range1], [range2]] # check for no intersection
-    ranges = [[intersection], [], []] # get intersecting range
-    if x1 < intersection[0]: ranges[1] += [left_pair] # get remainder ranges
-    if x2 > intersection[1]: ranges[1] += [right_pair]
-    if x3 < intersection[0]: ranges[2] += [left_pair]
-    if x4 > intersection[1]: ranges[2] += [right_pair]
-    return ranges
+def is_subrange_in_range(subrange, in_range):
+    (a, b), (c, d) = subrange, in_range
+    return c <= a <= b <= d
 
-def box_intersection(box1, box2): # uses 4 pairs of coordinates (even pairs not inclusive)
-    ((x1, y1), (x2, y2)), ((x3, y3), (x4, y4)) = box1, box2 # get x's and y's
-    if x1 == x2 or y1 == y2 or x3 == x4 or y3 == y4: return [[], [box1] * (x1 < x2 and y1 < y2), [box2] * (x3 < x4 and y3 < y4)] # check for zero-area
-    if box1 == box2: return [[box1], [], []] # check for same box
-    ([x_intersection], *x_pairs), ([y_intersection], *y_pairs) = range_intersection((x1, x2), (x3, x4)), range_intersection((y1, y2), (y3, y4)) # get pairs
-    if 0 in (len(x_intersection), len(y_intersection)): return [[], [box1], [box2]] # check for no intersection
-    boxes = [[((x_intersection[0], y_intersection[0]), (x_intersection[1], y_intersection[1]))], [], []] # get intersecting box
-    for i in (0, 1): # get remainder boxes
-        x_pair = flatten([x_intersection] + x_pairs[i])
-        for y in y_pairs[i]: boxes[i+1] += [((min(x_pair), y[0]), (max(x_pair), y[1]))]
-        for x in x_pairs[i]: boxes[i+1] += [((x[0], y_intersection[0]), (x[1], y_intersection[1]))]
-    return boxes
+def range_intersection(range1, range2):
+    (a, b), (c, d) = range1, range2
+    range_intersections = [[], [], None]
+    for subrange in cardinal(sorted({a, b, c, d}), 2):
+        A, B = is_subrange_in_range(subrange, range1), is_subrange_in_range(subrange, range2)
+        if A and B: range_intersections[2] = subrange
+        elif A or B: range_intersections[A+B*2-1].append(subrange)
+    return range_intersections
+
+def join_ranges(list_of_ranges):
+    if len(list_of_ranges) == 0: return None
+    flattened = flatten(list_of_ranges)
+    return min(flattened), max(flattened)
+
+def box_intersection(box1, box2):
+    ((x1, y1), (x2, y2)), ((x3, y3), (x4, y4)) = box1, box2
+    x_intersections, y_intersections = range_intersection((x1, x2), (x3, x4)), range_intersection((y1, y2), (y3, y4))
+    x_intersection, y_intersection = x_intersections[2], y_intersections[2]
+    box_intersections = [[], [], None]
+    if x_intersection and y_intersection:
+        for box in (0, 1):
+            if x_range := join_ranges(x_intersections[box] + [x_intersection] * bool(x_intersection)):
+                x1, x2 = x_range
+                for y1, y2 in y_intersections[box]:
+                    box_intersections[box].append(((x1, y1), (x2, y2)))
+            if y_intersection:
+                y1, y2 = y_intersection
+                for x1, x2 in x_intersections[box]:
+                    box_intersections[box].append(((x1, y1), (x2, y2)))
+        (x1, x2), (y1, y2) = x_intersection, y_intersection
+        box_intersections[2] = ((x1, y1), (x2, y2))
+    else:
+        box_intersections = [[box1], [box2], None]
+    return box_intersections
+
+def box_size(box):
+    (x1, y1), (x2, y2) = box
+    return (x2 - x1) * (y2 - y1)
 
 def cycle_bits(a, b, c, d, e):
     f = b - c
