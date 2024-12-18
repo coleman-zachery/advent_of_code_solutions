@@ -16,9 +16,18 @@ def rotate_grid(grid, direction="right"):
     elif direction == "180":
         return [row[::-1] for row in grid[::-1]]
 
+def grid_diagonal(grid):
+    A = {}
+    for i, row in enumerate(grid):
+        for j, value in enumerate(row):
+            A.setdefault(i + j, []).append(value)
+    return list(A.values())
+
 def flatten(matrix): return [item for row in matrix for item in row]
 def flip(matrix, sideways=True): return [row[::-1] for row in matrix] if sideways else [row for row in reversed(matrix)]
 def diagonal(matrix, left=True): return [[matrix[j][i] for j in range(len(matrix))] for i in range(len(matrix))] if left else [[matrix[len(matrix) - 1 - j][len(matrix) - 1 - i] for j in range(len(matrix))] for i in range(len(matrix))]
+
+def directions(keys): return dict(zip(keys, [(0, -1), (0, 1), (-1, 0), (1, 0)])) # left, right, up, down
 
 def combinations(array, n=2):
     def helper(start, combo):
@@ -34,7 +43,7 @@ def lcm_list(array): return array[0] if len(array) == 1 else lcm_list([lcm(array
 def average(array, include_zeros=True): return sum([num for num in array if num != 0 or include_zeros]) / max(len([num for num in array if num != 0 or include_zeros]), 1)
 def distance(a, b, direct=False): return sum([abs(a[i] - b[i]) ** (1 + direct) for i in range(len(a))]) ** (1 / (1 + direct))
 def none(array): return not any(array)
-def cardinal(array, num): return [tuple(array[i:i+num]) for i in range(len(array) - num + 1)]
+def cardinal(x, n): return [x[i:i+n] for i in range(len(x)-n+1)]
 
 def product(array, include_zeros=False):
     if 0 in array and include_zeros: return 0
@@ -89,10 +98,10 @@ def range_intersection(range1, range2):
         elif A or B: range_intersections[A+B*2-1].append(subrange)
     return range_intersections
 
-def join_ranges(list_of_ranges):
-    if len(list_of_ranges) == 0: return None
-    flattened = flatten(list_of_ranges)
-    return min(flattened), max(flattened)
+def join_ranges(ranges):
+    if ranges:
+        flattened = flatten(ranges)
+        return min(flattened), max(flattened)
 
 def box_intersection(box1, box2):
     ((x1, y1), (x2, y2)), ((x3, y3), (x4, y4)) = box1, box2
@@ -144,3 +153,8 @@ def walk(steps, origin=(0, 0), stop=False):
         locations[current] = locations.get(current, 0) + 1
         if current == stop: break
     return locations
+
+def find_all_indexes(substr, bigstr):
+    I, start = [], 0
+    while (start := bigstr.find(substr, start + 1)) != -1: I.append(start)
+    return I
